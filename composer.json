@@ -1,0 +1,13 @@
+{
+	"name": "webmasterskaya/php-zabbix-sender",
+	"require": {
+		"php": ">=8.2",
+		"symfony/options-resolver": "^7.2",
+		"symfony/validator": "^7.2"
+	},
+	"autoload": {
+		"psr-4": {
+			"Webmasterskaya\\ZabbixSender\\": "src/"
+		}
+	}
+}
