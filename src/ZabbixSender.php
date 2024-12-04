@@ -13,7 +13,7 @@ class ZabbixSender
 
     public function __construct(array $options = [])
     {
-        $this->options = Resolver::resolveOptions($options);
+        $this->options = Resolver::resolve($options);
     }
 
     public function send(
@@ -59,7 +59,7 @@ class ZabbixSender
     public function setHost(string $host): static
     {
         $this->options['host'] = $host;
-        $this->options         = Resolver::resolveOptions($this->options);
+        $this->options         = Resolver::resolve($this->options);
 
         return $this;
     }
@@ -74,7 +74,7 @@ class ZabbixSender
     public function setPort(int $port): static
     {
         $this->options['port'] = $port;
-        $this->options         = Resolver::resolveOptions($this->options);
+        $this->options         = Resolver::resolve($this->options);
 
         return $this;
     }

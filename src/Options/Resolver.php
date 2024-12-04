@@ -7,7 +7,7 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
 
 abstract class Resolver
 {
-    public static function resolveOptions(array $options): array
+    public static function resolve(array $options): array
     {
         static $resolver;
 
