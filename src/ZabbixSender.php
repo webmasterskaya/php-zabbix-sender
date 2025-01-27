@@ -6,43 +6,47 @@ use Webmasterskaya\ZabbixSender\Options\Resolver;
 
 class ZabbixSender
 {
-    /**
-     * @var array
-     */
-    private array $options = [];
-
     public function __construct(array $options = [])
     {
         $this->options = Resolver::resolve($options);
     }
 
+    /**
+     * @var array
+     */
+    private array $options = [];
+
     public function send(
-        ?array $data = null,
-        ?string $hostname = null,
-        ?string $key = null,
-        ?string $timestamp = null,
-        ?string $ns = null,
-        ?string $value = null
+        ?string $hostname,
+        string $key,
+        string|array|object $value
     ): bool {
-        if (!isset($data)) {
-            $data = [];
+        $data = [];
+
+        if (!empty($hostname)) {
+            $data['host'] = trim($hostname);
         }
 
-        if (isset($hostname)) {
-            $data['host'] = $hostname;
-        }
-
-        if (empty($data['host']) || trim($data['host']) === '-') {
+        if (empty($data['host']) || $data['host'] === '-') {
             $data['host'] = $this->options['host'];
         }
 
-        if (isset($key)) {
-            $data['key'] = $key;
+        $data['key'] = trim($key);
+
+        if (is_object($value)) {
+            $value = match (true) {
+                $value instanceof \JsonSerializable => json_encode($value,
+                    JSON_FORCE_OBJECT | JSON_BIGINT_AS_STRING | JSON_UNESCAPED_UNICODE),
+                $value instanceof \ArrayAccess => (array)$value,
+                default => get_object_vars($value),
+            };
         }
 
-        if (isset($value)) {
-            $data['value'] = $value;
+        if (is_array($value)) {
+            $value = json_encode($value, JSON_FORCE_OBJECT | JSON_BIGINT_AS_STRING | JSON_UNESCAPED_UNICODE);
         }
+
+        $data['value'] = trim($value);
 
         $data = Resolver::resolveData($data, $this->options);
 
@@ -51,31 +55,43 @@ class ZabbixSender
 
     public function whitHost(string $host): static
     {
-        $clone = clone $this;
-
-        return $clone->setHost($host);
-    }
-
-    public function setHost(string $host): static
-    {
-        $this->options['host'] = $host;
-        $this->options         = Resolver::resolve($this->options);
-
-        return $this;
+        return new static(array_merge_recursive($this->getOptions(), ['host' => $host]));
     }
 
     public function whitPort(int $port): static
     {
-        $clone = clone $this;
-
-        return $clone->setPort($port);
+        return new static(array_merge_recursive($this->getOptions(), ['port' => $port]));
     }
 
-    public function setPort(int $port): static
+    public function whitServer(string $server): static
     {
-        $this->options['port'] = $port;
-        $this->options         = Resolver::resolve($this->options);
+        return new static(array_merge_recursive($this->getOptions(), ['server' => $server]));
+    }
 
-        return $this;
+    public function whitTlsConnect(string $tls_connect): static
+    {
+        return new static(array_merge_recursive($this->getOptions(), ['tls-connect' => $tls_connect]));
+    }
+
+    public function getOptions()
+    {
+        return $this->getOptions();
+    }
+
+    protected function getTransport()
+    {
+        $socket = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
+
+        if (!$socket) {
+            throw new \RuntimeException("Can't create TCP socket");
+        }
+
+        $packet = "ZBXD\1" . pack('V', strlen($data)) . "\0\0\0\0" . $data;
+
+        $socketConnected = socket_connect(
+            $socket,
+            $this->options['server'],
+            $this->options['port']
+        );
     }
 }
