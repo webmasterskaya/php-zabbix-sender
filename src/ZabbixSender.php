@@ -142,21 +142,6 @@ class ZabbixSender
         return true;
     }
 
-    public function whitHost(string $host): static
-    {
-        return new static(array_merge_recursive($this->getOptions(), ['host' => $host]));
-    }
-
-    public function whitPort(int $port): static
-    {
-        return new static(array_merge_recursive($this->getOptions(), ['port' => $port]));
-    }
-
-    public function whitServer(string $server): static
-    {
-        return new static(array_merge_recursive($this->getOptions(), ['server' => $server]));
-    }
-
     public function getOptions(): array
     {
         return Resolver::resolve($this->options);
