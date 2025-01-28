@@ -22,6 +22,7 @@ abstract class Resolver
             $resolver
                 ->define('server')
                 ->allowedTypes('string')
+                ->required()
                 ->allowedValues(
                     Validation::createIsValidCallable(new Assert\Hostname(requireTld: true)),
                     Validation::createIsValidCallable(new Assert\Ip(version: Assert\Ip::ALL)));
@@ -42,17 +43,9 @@ abstract class Resolver
         return $resolver;
     }
 
-    public static function resolve(array $options, bool $require = false): array
+    public static function resolve(array $options): array
     {
-        if (!$require) {
-            return static::getResolver()->resolve($options);
-        }
-
-        $resolver = clone static::getResolver();
-
-        $resolver->setRequired(['server']);
-
-        return $resolver->resolve($options);
+        return static::getResolver()->resolve($options);
     }
 
     public static function resolveData(array $data, array $config): array

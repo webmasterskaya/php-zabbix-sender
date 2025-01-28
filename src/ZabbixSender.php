@@ -22,47 +22,28 @@ class ZabbixSender
     private ?int $_lastFailed = null;
     private ?float $_lastSpent = null;
     private ?int $_lastTotal = null;
+    /**
+     * @var true
+     */
+    private bool $batch = false;
+
+    protected array $data;
 
     public function __construct(array $options = [])
     {
         $this->options = Resolver::resolve($options);
     }
 
-    public function send(
-        string $key,
-        string|array|object $value,
-        ?string $host = null
-    ): bool {
-        $data = [];
+    public function batch(): static
+    {
+        $this->batch = true;
 
-        if (!empty($host)) {
-            $data['host'] = trim($host);
-        }
+        return $this;
+    }
 
-        if (empty($data['host']) || $data['host'] === '-') {
-            $data['host'] = $this->options['host'];
-        }
-
-        $data['key'] = trim($key);
-
-        if (is_object($value)) {
-            $value = match (true) {
-                $value instanceof \JsonSerializable => json_encode($value,
-                    JSON_FORCE_OBJECT | JSON_BIGINT_AS_STRING | JSON_UNESCAPED_UNICODE),
-                $value instanceof \ArrayAccess => (array)$value,
-                default => get_object_vars($value),
-            };
-        }
-
-        if (is_array($value)) {
-            $value = json_encode($value, JSON_FORCE_OBJECT | JSON_BIGINT_AS_STRING | JSON_UNESCAPED_UNICODE);
-        }
-
-        $data['value'] = trim($value);
-
-        $data = Resolver::resolveData($data, $this->options);
-
-        $data = $this->dataEncode($data);
+    public function execute(): bool
+    {
+        $data = $this->packedData($this->data);
 
         $this->open();
 
@@ -99,12 +80,66 @@ class ZabbixSender
         $this->_lastSpent         = $parsedInfo['spent'];
         $this->_lastTotal         = $parsedInfo['total'];
         if ($responseArray['response'] == "success") {
+            $this->data = [];
+            $this->batch = false;
+
             return true;
         } else {
             $this->_clearLastResponseData();
 
             return false;
         }
+    }
+
+    protected function prepareData(
+        string $key,
+        string|array|object $value,
+        ?string $host = null
+    ) {
+        if (!empty($host)) {
+            $data['host'] = trim($host);
+        }
+
+        if (empty($data['host']) || $data['host'] === '-') {
+            $data['host'] = $this->getOptions()['host'];
+        }
+
+        $data['key'] = trim($key);
+
+        if (is_object($value)) {
+            $value = match (true) {
+                $value instanceof \JsonSerializable => json_encode($value,
+                    JSON_FORCE_OBJECT | JSON_BIGINT_AS_STRING | JSON_UNESCAPED_UNICODE),
+                $value instanceof \ArrayAccess => (array)$value,
+                default => get_object_vars($value),
+            };
+        }
+
+        if (is_array($value)) {
+            $value = json_encode($value, JSON_FORCE_OBJECT | JSON_BIGINT_AS_STRING | JSON_UNESCAPED_UNICODE);
+        }
+
+        $data['value'] = trim($value);
+
+        return Resolver::resolveData($data, $this->options);
+    }
+
+    public function send(
+        null|string $key,
+        null|string|array|object $value,
+        null|string $host = null
+    ): bool {
+        $data = $this->prepareData($key, $value, $host);
+
+        if ($this->batch) {
+            $this->data[] = $data;
+        } else {
+            $this->data = [$data];
+
+            return $this->execute();
+        }
+
+        return true;
     }
 
     public function whitHost(string $host): static
@@ -122,17 +157,15 @@ class ZabbixSender
         return new static(array_merge_recursive($this->getOptions(), ['server' => $server]));
     }
 
-    public function getOptions()
+    public function getOptions(): array
     {
-        return $this->getOptions();
+        return Resolver::resolve($this->options);
     }
 
     protected function open(): void
     {
-        $options = Resolver::resolve($this->options, true);
-
-        $this->socket = @fsockopen($options['server'],
-            $options['port'],
+        $this->socket = @fsockopen($this->options['server'],
+            $this->options['port'],
             $error_code,
             $error_message,
             5);
@@ -188,11 +221,11 @@ class ZabbixSender
         }
     }
 
-    protected function dataEncode(array $data): string
+    protected function packedData(array $data): string
     {
         $data = json_encode([
             'request' => 'sender data',
-            'data'    => [$data]
+            'data'    => $data
         ]);
 
         $data_length = strlen($data);
