@@ -4,7 +4,8 @@ namespace Webmasterskaya\ZabbixSender;
 
 use Webmasterskaya\Utility\String\CasesHelper;
 use Webmasterskaya\ZabbixSender\Connection\ConnectionInterface;
-use Webmasterskaya\ZabbixSender\Options\Resolver;
+use Webmasterskaya\ZabbixSender\Resolver\DataResolver;
+use Webmasterskaya\ZabbixSender\Resolver\OptionsResolver;
 
 class ZabbixSender implements ZabbixSenderInterface
 {
@@ -30,7 +31,7 @@ class ZabbixSender implements ZabbixSenderInterface
 
     public function __construct(array $options = [])
     {
-        $this->options = Resolver::resolve($options);
+        $this->options = OptionsResolver::resolve($options);
 
         $connection = trim($this->options['connection_type'] ?? 'no-encryption') . '-connection';
         $connectionClass = __NAMESPACE__ . '\\Connection\\' . CasesHelper::classify($connection);
@@ -130,7 +131,7 @@ class ZabbixSender implements ZabbixSenderInterface
 
         $data['value'] = trim($value);
 
-        return Resolver::resolveData($data, $this->options);
+        return DataResolver::resolve($data, $this);
     }
 
     public function send(
@@ -154,7 +155,7 @@ class ZabbixSender implements ZabbixSenderInterface
 
     public function getOptions(): array
     {
-        return Resolver::resolve($this->options);
+        return $this->options;
     }
 
     protected function open(): void
