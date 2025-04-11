@@ -2,20 +2,16 @@
 
 namespace Webmasterskaya\ZabbixSender;
 
+use Webmasterskaya\Utility\String\CasesHelper;
 use Webmasterskaya\ZabbixSender\Connection\ConnectionInterface;
 use Webmasterskaya\ZabbixSender\Options\Resolver;
 
-class ZabbixSender
+class ZabbixSender implements ZabbixSenderInterface
 {
     /**
      * @var array
      */
     private array $options = [];
-
-    /**
-     * @var resource
-     */
-    private $socket;
 
     private ConnectionInterface $connection;
 
@@ -35,6 +31,15 @@ class ZabbixSender
     public function __construct(array $options = [])
     {
         $this->options = Resolver::resolve($options);
+
+        $connection = trim($this->options['connection_type'] ?? 'no-encryption') . '-connection';
+        $connectionClass = __NAMESPACE__ . '\\Connection\\' . CasesHelper::classify($connection);
+
+        if (!class_exists($connectionClass)) {
+            throw new \RuntimeException('Unable to create a Connection instance: ' . $connectionClass);
+        }
+
+        $this->connection = new $connectionClass($this->options);
     }
 
     public function batch(): static
@@ -211,5 +216,10 @@ class ZabbixSender
         $this->_lastFailed = null;
         $this->_lastSpent = null;
         $this->_lastTotal = null;
+    }
+
+    public function getOption(string $option, mixed $default = null): mixed
+    {
+        return $this->options[$option] ?? $default;
     }
 }
