@@ -2,9 +2,6 @@
 
 namespace Webmasterskaya\ZabbixSender;
 
-use ArrayAccess;
-use JsonSerializable;
-use RuntimeException;
 use Webmasterskaya\Utility\String\CasesHelper;
 use Webmasterskaya\ZabbixSender\Connection\ConnectionInterface;
 use Webmasterskaya\ZabbixSender\Resolver\DataResolver;
@@ -18,12 +15,7 @@ class ZabbixSender implements ZabbixSenderInterface
 	 */
 	private array $options = [];
 	private ConnectionInterface $connection;
-	private ?string $_lastResponseInfo = null;
-	private ?array $_lastResponseArray = null;
-	private ?int $_lastProcessed = null;
-	private ?int $_lastFailed = null;
-	private ?float $_lastSpent = null;
-	private ?int $_lastTotal = null;
+	private ?ResponseInfoInterface $lastResponseInfo = null;
 	/**
 	 * @var true
 	 */
@@ -38,7 +30,7 @@ class ZabbixSender implements ZabbixSenderInterface
 
 		if (!class_exists($connectionClass))
 		{
-			throw new RuntimeException('Unable to create a Connection instance: '.$connectionClass);
+			throw new \RuntimeException('Unable to create a Connection instance: '.$connectionClass);
 		}
 
 		$this->connection = new $connectionClass($this->options);
@@ -93,11 +85,11 @@ class ZabbixSender implements ZabbixSenderInterface
 		{
 			$value = match (true)
 			{
-				$value instanceof JsonSerializable => json_encode(
+				$value instanceof \JsonSerializable => json_encode(
 					$value,
 					JSON_FORCE_OBJECT | JSON_BIGINT_AS_STRING | JSON_UNESCAPED_UNICODE
 				),
-				$value instanceof ArrayAccess => (array) $value,
+				$value instanceof \ArrayAccess => (array) $value,
 				default => get_object_vars($value),
 			};
 		}
@@ -128,37 +120,33 @@ class ZabbixSender implements ZabbixSenderInterface
 
 		if ($sent_size === false || $sent_size != $data_size)
 		{
-			throw new RuntimeException('cannot receive response');
+			throw new \RuntimeException('cannot receive response');
 		}
 
 		$response = $this->read();
 
 		if ($response === false)
 		{
-			throw new RuntimeException('cannot receive response');
+			throw new \RuntimeException('cannot receive response');
 		}
 
 		$this->close();
 
 		if (!str_starts_with($response, "ZBXD"))
 		{
-			$this->_clearLastResponseData();
-			throw new RuntimeException('invalid protocol header in receive data');
+			$this->lastResponseInfo = null;
+			throw new \RuntimeException('invalid protocol header in receive data');
 		}
 
 		$responseData  = substr($response, 13);
 		$responseArray = json_decode($responseData, true);
 		if (is_null($responseArray))
 		{
-			throw new RuntimeException('invalid json data in receive data');
+			throw new \RuntimeException('invalid json data in receive data');
 		}
-		$this->_lastResponseArray = $responseArray;
-		$this->_lastResponseInfo  = $responseArray['info'];
-		$parsedInfo               = $this->_parseResponseInfo($this->_lastResponseInfo);
-		$this->_lastProcessed     = $parsedInfo['processed'];
-		$this->_lastFailed        = $parsedInfo['failed'];
-		$this->_lastSpent         = $parsedInfo['spent'];
-		$this->_lastTotal         = $parsedInfo['total'];
+
+		$this->lastResponseInfo = new ResponseInfo($responseArray['info']);
+
 		if ($responseArray['response'] == "success")
 		{
 			$this->data  = [];
@@ -168,7 +156,7 @@ class ZabbixSender implements ZabbixSenderInterface
 		}
 		else
 		{
-			$this->_clearLastResponseData();
+			$this->lastResponseInfo = null;
 
 			return false;
 		}
@@ -206,34 +194,6 @@ class ZabbixSender implements ZabbixSenderInterface
 	protected function close(): void
 	{
 		$this->connection->close();
-	}
-
-	private function _clearLastResponseData(): void
-	{
-		$this->_lastResponseInfo  = null;
-		$this->_lastResponseArray = null;
-		$this->_lastProcessed     = null;
-		$this->_lastFailed        = null;
-		$this->_lastSpent         = null;
-		$this->_lastTotal         = null;
-	}
-
-	protected function _parseResponseInfo($info = null): ?array
-	{
-		# info: "Processed 1 Failed 1 Total 2 Seconds spent 0.000035"
-		$parsedInfo = null;
-		if (isset($info))
-		{
-			list(, $processed, , $failed, , $total, , , $spent) = explode(" ", $info);
-			$parsedInfo = [
-				"processed" => (int) $processed,
-				"failed"    => (int) $failed,
-				"total"     => (int) $total,
-				"spent"     => (float) $spent,
-			];
-		}
-
-		return $parsedInfo;
 	}
 
 	public function getOption(string $option, mixed $default = null): mixed
