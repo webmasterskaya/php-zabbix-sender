@@ -5,13 +5,21 @@ namespace Webmasterskaya\ZabbixSender\Connection;
 use RuntimeException;
 
 /**
+ * Implements no encryption connections from host.
+ *
  * @internal
  */
 final class NoEncryptionConnection implements ConnectionInterface
 {
 
+	/**
+	 * @var ?resource The resource of the connection.
+	 */
 	private $socket;
 
+	/**
+	 * @var array Connection options
+	 */
 	private array $options;
 
 	public function __construct(array $options = [])
@@ -19,6 +27,9 @@ final class NoEncryptionConnection implements ConnectionInterface
 		$this->options = $options;
 	}
 
+	/**
+	 * @inheritDoc
+	 */
 	public function write(string $data): false|int
 	{
 		if (!$this->socket)
@@ -45,7 +56,11 @@ final class NoEncryptionConnection implements ConnectionInterface
 		return $total_written;
 	}
 
-	public function open()
+
+	/**
+	 * @inheritDoc
+	 */
+	public function open(): void
 	{
 		$this->socket = @fsockopen(
 			$this->options['server'],
@@ -61,6 +76,10 @@ final class NoEncryptionConnection implements ConnectionInterface
 		}
 	}
 
+
+	/**
+	 * @inheritDoc
+	 */
 	public function read(): false|string
 	{
 		if (!$this->socket)
@@ -82,6 +101,10 @@ final class NoEncryptionConnection implements ConnectionInterface
 		return $data;
 	}
 
+
+	/**
+	 * @inheritDoc
+	 */
 	public function close(): void
 	{
 		if ($this->socket)

@@ -7,6 +7,9 @@ use Webmasterskaya\ZabbixSender\Connection\ConnectionInterface;
 use Webmasterskaya\ZabbixSender\Resolver\DataResolver;
 use Webmasterskaya\ZabbixSender\Resolver\OptionsResolver;
 
+/**
+ * Provide functionality for sending data to Zabbix Server.
+ */
 class ZabbixSender implements ZabbixSenderInterface
 {
 	protected array $data;

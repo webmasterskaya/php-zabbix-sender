@@ -5,8 +5,14 @@ namespace Webmasterskaya\ZabbixSender\Resolver;
 use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Validator\Validation;
 
+/**
+ * Provides functionality for resolving options of ZabbixSender.
+ */
 final class OptionsResolver
 {
+	/**
+	 * Resolves ZabbixSender options.
+	 */
 	public static function resolve(array $options): array
 	{
 		static $resolver;

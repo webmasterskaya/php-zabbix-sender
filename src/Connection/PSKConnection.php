@@ -3,6 +3,8 @@
 namespace Webmasterskaya\ZabbixSender\Connection;
 
 /**
+ * Implements PKS connections from host.
+ *
  * @internal
  */
 final class PSKConnection implements ConnectionInterface
