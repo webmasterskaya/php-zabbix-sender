@@ -16,6 +16,17 @@ class ZabbixSender implements ZabbixSenderInterface
 	private array $options = [];
 	private ConnectionInterface $connection;
 	private ?ResponseInfoInterface $lastResponseInfo = null;
+
+	public function getLastResponseInfo(): ?ResponseInfoInterface
+	{
+		if ($this->batch)
+		{
+			throw new \RuntimeException('Unable to get last response info during batch processing.');
+		}
+
+		return $this->lastResponseInfo;
+	}
+
 	/**
 	 * @var true
 	 */
@@ -68,7 +79,7 @@ class ZabbixSender implements ZabbixSenderInterface
 		string $key,
 		string|array|object $value,
 		?string $host = null
-	) {
+	): array {
 		if (!empty($host))
 		{
 			$data['host'] = trim($host);
