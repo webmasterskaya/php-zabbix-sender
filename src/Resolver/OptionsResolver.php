@@ -25,7 +25,8 @@ final class OptionsResolver
 				->required()
 				->allowedValues(
 					Validation::createIsValidCallable(new Assert\Hostname(requireTld: true)),
-					Validation::createIsValidCallable(new Assert\Ip(version: Assert\Ip::ALL)));
+					Validation::createIsValidCallable(new Assert\Ip(version: Assert\Ip::ALL))
+				);
 
 			$resolver
 				->define('port')
