@@ -2,6 +2,9 @@
 
 namespace Webmasterskaya\ZabbixSender\Connection;
 
+/**
+ * @internal
+ */
 class PSKConnection implements ConnectionInterface
 {
 
