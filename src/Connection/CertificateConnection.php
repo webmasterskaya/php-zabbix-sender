@@ -5,7 +5,7 @@ namespace Webmasterskaya\ZabbixSender\Connection;
 /**
  * @internal
  */
-class CertificateConnection implements ConnectionInterface
+final class CertificateConnection implements ConnectionInterface
 {
 
 	public function open()
