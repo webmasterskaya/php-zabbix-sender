@@ -2,6 +2,9 @@
 
 namespace Webmasterskaya\ZabbixSender\Resolver;
 
+use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Validator\Validation;
+
 final class OptionsResolver
 {
 	public static function resolve(array $options): array
@@ -14,18 +17,25 @@ final class OptionsResolver
 
 			$resolver
 				->define('host')
-				->allowedTypes('string')
-				->required();
+				->allowedTypes('string');
 
 			$resolver
-				->define('key')
+				->define('server')
 				->allowedTypes('string')
-				->required();
+				->required()
+				->allowedValues(
+					Validation::createIsValidCallable(new Assert\Hostname(requireTld: true)),
+					Validation::createIsValidCallable(new Assert\Ip(version: Assert\Ip::ALL)));
 
 			$resolver
-				->define('value')
-				->allowedTypes('string')
-				->required();
+				->define('port')
+				->default(10051)
+				->allowedTypes('int');
+
+			$resolver
+				->define('timeout')
+				->default(30)
+				->allowedTypes('int');
 
 			$resolver->setIgnoreUndefined();
 		}
