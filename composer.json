@@ -4,7 +4,8 @@
 		"php": ">=8.2",
 		"symfony/options-resolver": "^7.2",
 		"symfony/validator": "^7.2",
-		"ext-sockets": "*"
+		"ext-sockets": "*",
+		"webmasterskaya/utility-string-helper": "^1.0"
 	},
 	"autoload": {
 		"psr-4": {
