@@ -12,8 +12,8 @@ final class DataResolver
 	/**
 	 * Resolves data before sending.
 	 *
-	 * @param   array                                               $options An array of data.
-	 * @param   \Webmasterskaya\ZabbixSender\ZabbixSenderInterface  $zabbixSender An instance of ZabbixSender.
+	 * @param   array                                               $options       An array of data.
+	 * @param   \Webmasterskaya\ZabbixSender\ZabbixSenderInterface  $zabbixSender  An instance of ZabbixSender.
 	 *
 	 * @return array
 	 */

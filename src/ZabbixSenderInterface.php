@@ -24,9 +24,10 @@ interface ZabbixSenderInterface
 	/**
 	 * Sends data to Zabbix.
 	 *
-	 * @param null|string $key The data key.
-	 * @param null|string|array|object $value The data value.
-	 * @param null|string $host The host name (optional).
+	 * @param   null|string               $key    The data key.
+	 * @param   null|string|array|object  $value  The data value.
+	 * @param   null|string               $host   The host name (optional).
+	 *
 	 * @return bool The result of the operation (true for success, false for failure).
 	 */
 	public function send(
@@ -45,8 +46,9 @@ interface ZabbixSenderInterface
 	/**
 	 * Returns the value of a specific option.
 	 *
-	 * @param string $option The name of the option.
-	 * @param mixed $default The default value (if the option is not set).
+	 * @param   string  $option   The name of the option.
+	 * @param   mixed   $default  The default value (if the option is not set).
+	 *
 	 * @return mixed The value of the option or the default value.
 	 */
 	public function getOption(string $option, mixed $default = null): mixed;
