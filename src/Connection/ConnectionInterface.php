@@ -6,7 +6,7 @@ interface ConnectionInterface
 {
     public function open();
 
-    public function read(): string;
+    public function read();
 
     public function write(string $data);
 
