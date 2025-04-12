@@ -2,8 +2,6 @@
 
 namespace Webmasterskaya\ZabbixSender\Resolver;
 
-use Webmasterskaya\ZabbixSender\ZabbixSenderInterface;
-
 /**
  * Provides functionality for resolving data before sending it to Zabbix.
  */
@@ -12,16 +10,16 @@ final class DataResolver
 	/**
 	 * Resolves data before sending.
 	 *
-	 * @param   array                                               $options       An array of data.
-	 * @param   \Webmasterskaya\ZabbixSender\ZabbixSenderInterface  $zabbixSender  An instance of ZabbixSender.
+	 * @param   array  $options  An array of data.
 	 *
 	 * @return array
 	 */
-	public static function resolve(array $options, ZabbixSenderInterface $zabbixSender): array
+	public static function resolve(array $options): array
 	{
 		static $resolver;
 
-		if (!isset($resolver)) {
+		if (!isset($resolver))
+		{
 			$resolver = new \Symfony\Component\OptionsResolver\OptionsResolver();
 
 			$resolver
