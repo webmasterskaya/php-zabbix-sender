@@ -35,7 +35,7 @@ final class OptionsResolver
 
 			$resolver
 				->define('port')
-				->default(1051)
+				->default(10051)
 				->allowedTypes('int');
 
 			$resolver
