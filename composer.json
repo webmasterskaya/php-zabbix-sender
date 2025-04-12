@@ -12,6 +12,11 @@
 			"Webmasterskaya\\ZabbixSender\\": "src/"
 		}
 	},
+	"autoload-dev": {
+		"psr-4": {
+			"Webmasterskaya\\ZabbixSender\\Tests\\": "tests/"
+		}
+	},
 	"require-dev": {
 		"phpunit/phpunit": "^11.5"
 	}
