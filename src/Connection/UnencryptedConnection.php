@@ -70,7 +70,7 @@ final class UnencryptedConnection implements ConnectionInterface
 		);
 
 		if (!$this->socket) {
-			throw new RuntimeException(sprintf('%s, %s', $error_code, $error_message));
+			throw new RuntimeException(sprintf('%s: %s', $error_code, $error_message));
 		}
 	}
 
