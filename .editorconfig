@@ -1,0 +1,68 @@
+# .editorconfig
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_size = 4
+indent_style = tab
+insert_final_newline = true
+max_line_length = 180
+tab_width = 4
+
+[*.xml]
+ij_xml_align_attributes = true
+ij_xml_attribute_wrap = normal
+ij_xml_block_comment_at_first_column = true
+ij_xml_keep_blank_lines = 2
+ij_xml_line_comment_at_first_column = true
+ij_xml_space_after_tag_name = true
+ij_xml_space_around_equals_in_attribute = false
+ij_xml_space_inside_empty_tag = false
+ij_xml_text_wrap = normal
+
+[{*.bash,*.sh,*.zsh}]
+indent_size = 2
+indent_style = space
+tab_width = 2
+
+[*.php]
+ij_php_align_assignments = true
+ij_php_align_multiline_parameters = false
+ij_php_align_phpdoc_comments = true
+ij_php_array_initializer_new_line_after_left_brace = true
+ij_php_array_initializer_right_brace_on_new_line = true
+ij_php_array_initializer_wrap = on_every_item
+ij_php_binary_operation_sign_on_next_line = false
+ij_php_binary_operation_wrap = off
+ij_php_blank_lines_after_imports = 1
+ij_php_blank_lines_around_class = 1
+ij_php_blank_lines_around_method = 1
+ij_php_keep_blank_lines_in_code = 2
+ij_php_keep_indents_on_empty_lines = false
+ij_php_keep_line_breaks = true
+ij_php_lower_case_keywords = true
+ij_php_lower_case_null_const = true
+ij_php_method_parameters_new_line_after_left_paren = true
+ij_php_method_parameters_right_paren_on_new_line = true
+ij_php_method_parameters_wrap = on_every_item
+ij_php_space_after_colon = true
+ij_php_space_after_comma = true
+ij_php_space_before_colon = false
+ij_php_space_before_comma = false
+ij_php_spaces_around_assignment_operators = true
+ij_php_spaces_within_array_initializer_braces = false
+ij_php_spaces_within_parentheses = false
+ij_php_phpdoc_param_spaces_between_name_and_description = 2
+ij_php_phpdoc_param_spaces_between_type_and_name = 2
+ij_php_phpdoc_use_fqcn = true
+
+[{*.har,*.jsb2,*.jsb3,*.json,*.jsonc,*.postman_collection,*.postman_collection.json,*.postman_environment,*.postman_environment.json,.babelrc,.eslintrc,.prettierrc,.stylelintrc,.ws-context,composer.lock,jest.config}]
+indent_size = 2
+
+[{*.markdown,*.md}]
+indent_size = 2
+
+[{*.yaml,*.yml}]
+indent_size = 2
