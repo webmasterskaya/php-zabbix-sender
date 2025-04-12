@@ -21,8 +21,7 @@ final class DataResolver
 	{
 		static $resolver;
 
-		if (!isset($resolver))
-		{
+		if (!isset($resolver)) {
 			$resolver = new \Symfony\Component\OptionsResolver\OptionsResolver();
 
 			$resolver

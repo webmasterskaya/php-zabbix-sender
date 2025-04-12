@@ -43,7 +43,7 @@ class ResponseInfo implements ResponseInfoInterface
 	public function __construct(string $response)
 	{
 		# response: "Processed 1 Failed 1 Total 2 Seconds spent 0.000035"
-		list(, $processed, , $failed, , $total, , , $spent) = explode(" ", $response);
+		[, $processed, , $failed, , $total, , , $spent] = explode(" ", $response);
 
 		$this->processed = (int) $processed;
 		$this->failed    = (int) $failed;

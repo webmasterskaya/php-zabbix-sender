@@ -7,7 +7,6 @@ namespace Webmasterskaya\ZabbixSender\Connection;
  */
 final class CertificateConnection implements ConnectionInterface
 {
-
 	public function open()
 	{
 		// TODO: Implement open() method.

@@ -4,6 +4,9 @@ namespace Webmasterskaya\ZabbixSender\Connection;
 
 use RuntimeException;
 
+use function sprintf;
+use function strlen;
+
 /**
  * Implements no encryption connections from host.
  *
@@ -11,7 +14,6 @@ use RuntimeException;
  */
 final class NoEncryptionConnection implements ConnectionInterface
 {
-
 	/**
 	 * @var ?resource The resource of the connection.
 	 */
@@ -32,25 +34,22 @@ final class NoEncryptionConnection implements ConnectionInterface
 	 */
 	public function write(string $data): false|int
 	{
-		if (!$this->socket)
-		{
+		if (!$this->socket) {
 			$this->open();
 		}
 
 		$total_written = 0;
 		$length        = strlen($data);
-		while ($total_written < $length)
-		{
+		while ($total_written < $length) {
 			$written = @fwrite($this->socket, $data);
-			if ($written === false)
-			{
+			if ($written === false) {
 				return false;
 			}
-			else
-			{
-				$total_written += $written;
-				$data          = substr($data, $written);
-			}
+
+
+			$total_written += $written;
+			$data          = substr($data, $written);
+
 		}
 
 		return $total_written;
@@ -70,8 +69,7 @@ final class NoEncryptionConnection implements ConnectionInterface
 			5
 		);
 
-		if (!$this->socket)
-		{
+		if (!$this->socket) {
 			throw new RuntimeException(sprintf('%s, %s', $error_code, $error_message));
 		}
 	}
@@ -82,17 +80,14 @@ final class NoEncryptionConnection implements ConnectionInterface
 	 */
 	public function read(): false|string
 	{
-		if (!$this->socket)
-		{
+		if (!$this->socket) {
 			$this->open();
 		}
 
 		$data = "";
-		while (!feof($this->socket))
-		{
+		while (!feof($this->socket)) {
 			$buffer = fread($this->socket, 8192);
-			if ($buffer === false)
-			{
+			if ($buffer === false) {
 				return false;
 			}
 			$data .= $buffer;
@@ -107,8 +102,7 @@ final class NoEncryptionConnection implements ConnectionInterface
 	 */
 	public function close(): void
 	{
-		if ($this->socket)
-		{
+		if ($this->socket) {
 			fclose($this->socket);
 		}
 	}

@@ -2,10 +2,18 @@
 
 namespace Webmasterskaya\ZabbixSender;
 
+use ArrayAccess;
+use JsonSerializable;
+use RuntimeException;
 use Webmasterskaya\Utility\String\CasesHelper;
 use Webmasterskaya\ZabbixSender\Connection\ConnectionInterface;
 use Webmasterskaya\ZabbixSender\Resolver\DataResolver;
 use Webmasterskaya\ZabbixSender\Resolver\OptionsResolver;
+
+use function is_array;
+use function is_null;
+use function is_object;
+use function strlen;
 
 /**
  * Provide functionality for sending data to Zabbix Server.
@@ -28,12 +36,11 @@ class ZabbixSender implements ZabbixSenderInterface
 	{
 		$this->options = OptionsResolver::resolve($options);
 
-		$connection      = trim($this->options['connection_type'] ?? 'no-encryption').'-connection';
-		$connectionClass = __NAMESPACE__.'\\Connection\\'.CasesHelper::classify($connection);
+		$connection      = trim($this->options['connection_type'] ?? 'no-encryption') . '-connection';
+		$connectionClass = __NAMESPACE__ . '\\Connection\\' . CasesHelper::classify($connection);
 
-		if (!class_exists($connectionClass))
-		{
-			throw new \RuntimeException('Unable to create a Connection instance: '.$connectionClass);
+		if (!class_exists($connectionClass)) {
+			throw new RuntimeException('Unable to create a Connection instance: ' . $connectionClass);
 		}
 
 		$this->connection = new $connectionClass($this->options);
@@ -41,9 +48,8 @@ class ZabbixSender implements ZabbixSenderInterface
 
 	public function getLastResponseInfo(): ?ResponseInfoInterface
 	{
-		if ($this->batch)
-		{
-			throw new \RuntimeException('Unable to get last response info during batch processing.');
+		if ($this->batch) {
+			throw new RuntimeException('Unable to get last response info during batch processing.');
 		}
 
 		return $this->lastResponseInfo;
@@ -63,12 +69,9 @@ class ZabbixSender implements ZabbixSenderInterface
 	): bool {
 		$data = $this->prepareData($key, $value, $host);
 
-		if ($this->batch)
-		{
+		if ($this->batch) {
 			$this->data[] = $data;
-		}
-		else
-		{
+		} else {
 			$this->data = [$data];
 
 			return $this->execute();
@@ -82,33 +85,28 @@ class ZabbixSender implements ZabbixSenderInterface
 		string|array|object $value,
 		?string $host = null
 	): array {
-		if (!empty($host))
-		{
+		if (!empty($host)) {
 			$data['host'] = trim($host);
 		}
 
-		if (empty($data['host']) || $data['host'] === '-')
-		{
+		if (empty($data['host']) || $data['host'] === '-') {
 			$data['host'] = $this->getOptions()['host'];
 		}
 
 		$data['key'] = trim($key);
 
-		if (is_object($value))
-		{
-			$value = match (true)
-			{
-				$value instanceof \JsonSerializable => json_encode(
+		if (is_object($value)) {
+			$value = match (true) {
+				$value instanceof JsonSerializable => json_encode(
 					$value,
 					JSON_FORCE_OBJECT | JSON_BIGINT_AS_STRING | JSON_UNESCAPED_UNICODE
 				),
-				$value instanceof \ArrayAccess => (array) $value,
+				$value instanceof ArrayAccess => (array) $value,
 				default => get_object_vars($value),
 			};
 		}
 
-		if (is_array($value))
-		{
+		if (is_array($value)) {
 			$value = json_encode($value, JSON_FORCE_OBJECT | JSON_BIGINT_AS_STRING | JSON_UNESCAPED_UNICODE);
 		}
 
@@ -131,48 +129,43 @@ class ZabbixSender implements ZabbixSenderInterface
 		$data_size = strlen($data);
 		$sent_size = $this->write($data);
 
-		if ($sent_size === false || $sent_size != $data_size)
-		{
-			throw new \RuntimeException('cannot receive response');
+		if ($sent_size === false || $sent_size != $data_size) {
+			throw new RuntimeException('cannot receive response');
 		}
 
 		$response = $this->read();
 
-		if ($response === false)
-		{
-			throw new \RuntimeException('cannot receive response');
+		if ($response === false) {
+			throw new RuntimeException('cannot receive response');
 		}
 
 		$this->close();
 
-		if (!str_starts_with($response, "ZBXD"))
-		{
+		if (!str_starts_with($response, "ZBXD")) {
 			$this->lastResponseInfo = null;
-			throw new \RuntimeException('invalid protocol header in receive data');
+			throw new RuntimeException('invalid protocol header in receive data');
 		}
 
 		$responseData  = substr($response, 13);
 		$responseArray = json_decode($responseData, true);
-		if (is_null($responseArray))
-		{
-			throw new \RuntimeException('invalid json data in receive data');
+		if (is_null($responseArray)) {
+			throw new RuntimeException('invalid json data in receive data');
 		}
 
 		$this->lastResponseInfo = new ResponseInfo($responseArray['info']);
 
-		if ($responseArray['response'] == "success")
-		{
+		if ($responseArray['response'] == "success") {
 			$this->data  = [];
 			$this->batch = false;
 
 			return true;
 		}
-		else
-		{
-			$this->lastResponseInfo = null;
 
-			return false;
-		}
+
+		$this->lastResponseInfo = null;
+
+		return false;
+
 	}
 
 	protected function packedData(array $data): string
@@ -184,9 +177,9 @@ class ZabbixSender implements ZabbixSenderInterface
 
 		$data_length = strlen($data);
 
-		$data_header = "ZBXD\1".pack("VV", $data_length, 0x00);
+		$data_header = "ZBXD\1" . pack("VV", $data_length, 0x00);
 
-		return ($data_header.$data);
+		return ($data_header . $data);
 	}
 
 	protected function open(): void

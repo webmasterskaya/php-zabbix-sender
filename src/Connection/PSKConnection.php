@@ -9,7 +9,6 @@ namespace Webmasterskaya\ZabbixSender\Connection;
  */
 final class PSKConnection implements ConnectionInterface
 {
-
 	public function open()
 	{
 		// TODO: Implement open() method.
