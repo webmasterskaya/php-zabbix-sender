@@ -2,6 +2,8 @@
 
 namespace Webmasterskaya\ZabbixSender\Resolver;
 
+use Webmasterskaya\ZabbixSender\ZabbixSenderInterface;
+
 /**
  * Provides functionality for resolving data before sending it to Zabbix.
  */
@@ -14,7 +16,7 @@ final class DataResolver
 	 *
 	 * @return array
 	 */
-	public static function resolve(array $options): array
+	public static function resolve(array $options, ZabbixSenderInterface $zabbixSender): array
 	{
 		static $resolver;
 
@@ -24,8 +26,7 @@ final class DataResolver
 
 			$resolver
 				->define('host')
-				->allowedTypes('string')
-				->required();
+				->allowedTypes('string');
 
 			$resolver
 				->define('key')
@@ -38,6 +39,15 @@ final class DataResolver
 				->required();
 
 			$resolver->setIgnoreUndefined();
+		}
+
+		if (!$zabbixSender->getOption('host'))
+		{
+			$resolver->setRequired('host');
+		}
+		else
+		{
+			$resolver->setDefault('host', $zabbixSender->getOption('host'));
 		}
 
 		return $resolver->resolve($options);
