@@ -7,7 +7,7 @@ namespace Webmasterskaya\ZabbixSender\Connection;
  *
  * @internal
  */
-final class PSKConnection implements ConnectionInterface
+final class PskConnection implements ConnectionInterface
 {
 	public function open()
 	{

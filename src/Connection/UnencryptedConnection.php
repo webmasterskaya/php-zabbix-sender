@@ -12,7 +12,7 @@ use function strlen;
  *
  * @internal
  */
-final class NoEncryptionConnection implements ConnectionInterface
+final class UnencryptedConnection implements ConnectionInterface
 {
 	/**
 	 * @var ?resource The resource of the connection.
