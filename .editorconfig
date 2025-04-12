@@ -17,7 +17,7 @@ ij_xml_attribute_wrap = normal
 ij_xml_block_comment_at_first_column = true
 ij_xml_keep_blank_lines = 2
 ij_xml_line_comment_at_first_column = true
-ij_xml_space_after_tag_name = true
+ij_xml_space_after_tag_name = false
 ij_xml_space_around_equals_in_attribute = false
 ij_xml_space_inside_empty_tag = false
 ij_xml_text_wrap = normal
@@ -58,7 +58,7 @@ ij_php_phpdoc_param_spaces_between_name_and_description = 2
 ij_php_phpdoc_param_spaces_between_type_and_name = 2
 ij_php_phpdoc_use_fqcn = true
 
-[{*.har,*.jsb2,*.jsb3,*.json,*.jsonc,*.postman_collection,*.postman_collection.json,*.postman_environment,*.postman_environment.json,.babelrc,.eslintrc,.prettierrc,.stylelintrc,.ws-context,composer.lock,jest.config}]
+[{*.json,composer.lock}]
 indent_size = 2
 
 [{*.markdown,*.md}]

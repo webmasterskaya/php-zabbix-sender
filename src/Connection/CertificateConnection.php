@@ -18,7 +18,7 @@ final class CertificateConnection implements ConnectionInterface
 		// TODO: Implement read() method.
 	}
 
-	public function write(string $data)
+	public function write(string $data): false|int
 	{
 		// TODO: Implement write() method.
 	}
