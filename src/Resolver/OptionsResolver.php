@@ -2,6 +2,7 @@
 
 namespace Webmasterskaya\ZabbixSender\Resolver;
 
+use Symfony\Component\OptionsResolver\Exception\InvalidOptionsException;
 use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Validator\Validation;
 
@@ -85,10 +86,16 @@ final class OptionsResolver
 			->info('PSK-identity string.');
 
 		$resolver
-			->define('tls-psk-file')
+			->define('tls-psk')
 			->allowedTypes('string')
-			->info('Full pathname of a file containing the pre-shared key.')
-			->allowedValues(Validation::createIsValidCallable(new Assert\File()));
+			->info('Pre-shared key (PSK) in hexadecimal string format.')
+			->normalize(function (\Symfony\Component\OptionsResolver\OptionsResolver $options, $value) {
+				if (!ctype_xdigit($value)) {
+					throw new InvalidOptionsException("Invalid PSK format. PSK must be a hexadecimal string.");
+				}
+				return $value;
+			});
+
 
 		$resolver
 			->define('tls-cipher')
@@ -114,7 +121,7 @@ final class OptionsResolver
 		if (isset($options['tls-connect'])) {
 			switch ($options['tls-connect']) {
 				case 'psk':
-					$resolver->setRequired(['tls-psk-identity', 'tls-psk-file']);
+					$resolver->setRequired(['tls-psk-identity', 'tls-psk']);
 					$connection_type = 'psk';
 					break;
 				case 'cert':
