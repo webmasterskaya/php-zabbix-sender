@@ -12,41 +12,33 @@ final class DataResolver
 	/**
 	 * Resolves data before sending.
 	 *
-	 * @param   array  $options  An array of data.
+	 * @param array $options An array of data.
 	 *
 	 * @return array
 	 */
 	public static function resolve(array $options, ZabbixSenderInterface $zabbixSender): array
 	{
-		static $resolver;
+		$resolver = new \Symfony\Component\OptionsResolver\OptionsResolver();
 
-		if (!isset($resolver))
-		{
-			$resolver = new \Symfony\Component\OptionsResolver\OptionsResolver();
+		$resolver
+			->define('host')
+			->allowedTypes('string');
 
-			$resolver
-				->define('host')
-				->allowedTypes('string');
+		$resolver
+			->define('key')
+			->allowedTypes('string')
+			->required();
 
-			$resolver
-				->define('key')
-				->allowedTypes('string')
-				->required();
+		$resolver
+			->define('value')
+			->allowedTypes('string')
+			->required();
 
-			$resolver
-				->define('value')
-				->allowedTypes('string')
-				->required();
+		$resolver->setIgnoreUndefined();
 
-			$resolver->setIgnoreUndefined();
-		}
-
-		if (!$zabbixSender->getOption('host'))
-		{
+		if (!$zabbixSender->getOption('host')) {
 			$resolver->setRequired('host');
-		}
-		else
-		{
+		} else {
 			$resolver->setDefault('host', $zabbixSender->getOption('host'));
 		}
 
