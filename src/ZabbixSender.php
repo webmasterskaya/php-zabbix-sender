@@ -2,248 +2,208 @@
 
 namespace Webmasterskaya\ZabbixSender;
 
-use Webmasterskaya\ZabbixSender\Options\Resolver;
+use ArrayAccess;
+use JsonSerializable;
+use RuntimeException;
+use Webmasterskaya\Utility\String\CasesHelper;
+use Webmasterskaya\ZabbixSender\Connection\ConnectionInterface;
+use Webmasterskaya\ZabbixSender\Resolver\DataResolver;
+use Webmasterskaya\ZabbixSender\Resolver\OptionsResolver;
 
-class ZabbixSender
+use function is_array;
+use function is_null;
+use function is_object;
+use function strlen;
+
+/**
+ * Provide functionality for sending data to Zabbix Server.
+ */
+class ZabbixSender implements ZabbixSenderInterface
 {
-    /**
-     * @var array
-     */
-    private array $options = [];
+	protected array $data;
+	/**
+	 * @var array
+	 */
+	private array $options = [];
+	private ConnectionInterface $connection;
+	private ?ResponseInfoInterface $lastResponseInfo = null;
+	/**
+	 * @var true
+	 */
+	private bool $batch = false;
 
-    /**
-     * @var resource
-     */
-    private $socket;
+	public function __construct(array $options = [])
+	{
+		$this->options = OptionsResolver::resolve($options);
 
-    private ?string $_lastResponseInfo = null;
-    private ?array $_lastResponseArray = null;
-    private ?int $_lastProcessed = null;
-    private ?int $_lastFailed = null;
-    private ?float $_lastSpent = null;
-    private ?int $_lastTotal = null;
-    /**
-     * @var true
-     */
-    private bool $batch = false;
+		$connection      = trim($this->options['connection_type'] ?? 'no-encryption') . '-connection';
+		$connectionClass = __NAMESPACE__ . '\\Connection\\' . CasesHelper::classify($connection);
 
-    protected array $data;
+		if (!class_exists($connectionClass)) {
+			throw new RuntimeException('Unable to create a Connection instance: ' . $connectionClass);
+		}
 
-    public function __construct(array $options = [])
-    {
-        $this->options = Resolver::resolve($options);
-    }
+		$this->connection = new $connectionClass($this->options);
+	}
 
-    public function batch(): static
-    {
-        $this->batch = true;
+	public function getLastResponseInfo(): ?ResponseInfoInterface
+	{
+		if ($this->batch) {
+			throw new RuntimeException('Unable to get last response info during batch processing.');
+		}
 
-        return $this;
-    }
+		return $this->lastResponseInfo;
+	}
 
-    public function execute(): bool
-    {
-        $data = $this->packedData($this->data);
+	public function batch(): static
+	{
+		$this->batch = true;
 
-        $this->open();
+		return $this;
+	}
 
-        $data_size = strlen($data);
-        $sent_size = $this->write($data);
+	public function send(
+		null|string $key,
+		null|string|array|object $value,
+		null|string $host = null
+	): bool {
+		$data = $this->prepareData($key, $value, $host);
 
-        if ($sent_size === false || $sent_size != $data_size) {
-            throw new \RuntimeException('cannot receive response');
-        }
+		if ($this->batch) {
+			$this->data[] = $data;
+		} else {
+			$this->data = [$data];
 
-        $response = $this->read();
+			return $this->execute();
+		}
 
-        if ($response === false) {
-            throw new \RuntimeException('cannot receive response');
-        }
+		return true;
+	}
 
-        $this->close();
+	protected function prepareData(
+		string $key,
+		string|array|object $value,
+		?string $host = null
+	): array {
+		if (!empty($host)) {
+			$data['host'] = trim($host);
+		}
 
-        if (!str_starts_with($response, "ZBXD")) {
-            $this->_clearLastResponseData();
-            throw new \RuntimeException('invalid protocol header in receive data');
-        }
+		if (empty($data['host']) || $data['host'] === '-') {
+			$data['host'] = $this->getOptions()['host'];
+		}
 
-        $responseData  = substr($response, 13);
-        $responseArray = json_decode($responseData, true);
-        if (is_null($responseArray)) {
-            throw new \RuntimeException('invalid json data in receive data');
-        }
-        $this->_lastResponseArray = $responseArray;
-        $this->_lastResponseInfo  = $responseArray['info'];
-        $parsedInfo               = $this->_parseResponseInfo($this->_lastResponseInfo);
-        $this->_lastProcessed     = $parsedInfo['processed'];
-        $this->_lastFailed        = $parsedInfo['failed'];
-        $this->_lastSpent         = $parsedInfo['spent'];
-        $this->_lastTotal         = $parsedInfo['total'];
-        if ($responseArray['response'] == "success") {
-            $this->data = [];
-            $this->batch = false;
+		$data['key'] = trim($key);
 
-            return true;
-        } else {
-            $this->_clearLastResponseData();
+		if (is_object($value)) {
+			$value = match (true) {
+				$value instanceof JsonSerializable => json_encode(
+					$value,
+					JSON_FORCE_OBJECT | JSON_BIGINT_AS_STRING | JSON_UNESCAPED_UNICODE
+				),
+				$value instanceof ArrayAccess => (array) $value,
+				default => get_object_vars($value),
+			};
+		}
 
-            return false;
-        }
-    }
+		if (is_array($value)) {
+			$value = json_encode($value, JSON_FORCE_OBJECT | JSON_BIGINT_AS_STRING | JSON_UNESCAPED_UNICODE);
+		}
 
-    protected function prepareData(
-        string $key,
-        string|array|object $value,
-        ?string $host = null
-    ) {
-        if (!empty($host)) {
-            $data['host'] = trim($host);
-        }
+		$data['value'] = trim($value);
 
-        if (empty($data['host']) || $data['host'] === '-') {
-            $data['host'] = $this->getOptions()['host'];
-        }
+		return DataResolver::resolve($data, $this);
+	}
 
-        $data['key'] = trim($key);
+	public function getOptions(): array
+	{
+		return $this->options;
+	}
 
-        if (is_object($value)) {
-            $value = match (true) {
-                $value instanceof \JsonSerializable => json_encode($value,
-                    JSON_FORCE_OBJECT | JSON_BIGINT_AS_STRING | JSON_UNESCAPED_UNICODE),
-                $value instanceof \ArrayAccess => (array)$value,
-                default => get_object_vars($value),
-            };
-        }
+	public function execute(): bool
+	{
+		$data = $this->packedData($this->data);
 
-        if (is_array($value)) {
-            $value = json_encode($value, JSON_FORCE_OBJECT | JSON_BIGINT_AS_STRING | JSON_UNESCAPED_UNICODE);
-        }
+		$this->open();
 
-        $data['value'] = trim($value);
+		$data_size = strlen($data);
+		$sent_size = $this->write($data);
 
-        return Resolver::resolveData($data, $this->options);
-    }
+		if ($sent_size === false || $sent_size != $data_size) {
+			throw new RuntimeException('cannot receive response');
+		}
 
-    public function send(
-        null|string $key,
-        null|string|array|object $value,
-        null|string $host = null
-    ): bool {
-        $data = $this->prepareData($key, $value, $host);
+		$response = $this->read();
 
-        if ($this->batch) {
-            $this->data[] = $data;
-        } else {
-            $this->data = [$data];
+		if ($response === false) {
+			throw new RuntimeException('cannot receive response');
+		}
 
-            return $this->execute();
-        }
+		$this->close();
 
-        return true;
-    }
+		if (!str_starts_with($response, "ZBXD")) {
+			$this->lastResponseInfo = null;
+			throw new RuntimeException('invalid protocol header in receive data');
+		}
 
-    public function getOptions(): array
-    {
-        return Resolver::resolve($this->options);
-    }
+		$responseData  = substr($response, 13);
+		$responseArray = json_decode($responseData, true);
+		if (is_null($responseArray)) {
+			throw new RuntimeException('invalid json data in receive data');
+		}
 
-    protected function open(): void
-    {
-        $this->socket = @fsockopen($this->options['server'],
-            $this->options['port'],
-            $error_code,
-            $error_message,
-            5);
+		$this->lastResponseInfo = new ResponseInfo($responseArray['info']);
 
-        if (!$this->socket) {
-            throw new \RuntimeException(sprintf('%s, %s', $error_code, $error_message));
-        }
-    }
+		if ($responseArray['response'] == "success") {
+			$this->data  = [];
+			$this->batch = false;
 
-    protected function write(string $data): false|int
-    {
-        if (!$this->socket) {
-            $this->open();
-        }
+			return true;
+		}
 
-        $total_written = 0;
-        $length        = strlen($data);
-        while ($total_written < $length) {
-            $written = @fwrite($this->socket, $data);
-            if ($written === false) {
-                return false;
-            } else {
-                $total_written += $written;
-                $data          = substr($data, $written);
-            }
-        }
 
-        return $total_written;
-    }
+		$this->lastResponseInfo = null;
 
-    protected function read(): false|string
-    {
-        if (!$this->socket) {
-            $this->open();
-        }
+		return false;
 
-        $data = "";
-        while (!feof($this->socket)) {
-            $buffer = fread($this->socket, 8192);
-            if ($buffer === false) {
-                return false;
-            }
-            $data .= $buffer;
-        }
+	}
 
-        return $data;
-    }
+	protected function packedData(array $data): string
+	{
+		$data = json_encode([
+			'request' => 'sender data',
+			'data'    => $data,
+		]);
 
-    protected function close(): void
-    {
-        if ($this->socket) {
-            fclose($this->socket);
-        }
-    }
+		$data_length = strlen($data);
 
-    protected function packedData(array $data): string
-    {
-        $data = json_encode([
-            'request' => 'sender data',
-            'data'    => $data
-        ]);
+		$data_header = "ZBXD\1" . pack("VV", $data_length, 0x00);
 
-        $data_length = strlen($data);
+		return ($data_header . $data);
+	}
 
-        $data_header = "ZBXD\1" . pack("VV", $data_length, 0x00);
+	protected function open(): void
+	{
+		$this->connection->open();
+	}
 
-        return ($data_header . $data);
-    }
+	protected function write(string $data): false|int
+	{
+		return $this->connection->write($data);
+	}
 
-    protected function _parseResponseInfo($info = null): ?array
-    {
-        # info: "Processed 1 Failed 1 Total 2 Seconds spent 0.000035"
-        $parsedInfo = null;
-        if (isset($info)) {
-            list(, $processed, , $failed, , $total, , , $spent) = explode(" ", $info);
-            $parsedInfo = [
-                "processed" => (int)$processed,
-                "failed"    => (int)$failed,
-                "total"     => (int)$total,
-                "spent"     => (float)$spent,
-            ];
-        }
+	protected function read(): false|string
+	{
+		return $this->connection->read();
+	}
 
-        return $parsedInfo;
-    }
+	protected function close(): void
+	{
+		$this->connection->close();
+	}
 
-    private function _clearLastResponseData(): void
-    {
-        $this->_lastResponseInfo  = null;
-        $this->_lastResponseArray = null;
-        $this->_lastProcessed     = null;
-        $this->_lastFailed        = null;
-        $this->_lastSpent         = null;
-        $this->_lastTotal         = null;
-    }
+	public function getOption(string $option, mixed $default = null): mixed
+	{
+		return $this->options[$option] ?? $default;
+	}
 }
