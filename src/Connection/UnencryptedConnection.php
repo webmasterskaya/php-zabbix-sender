@@ -3,8 +3,9 @@
 namespace Webmasterskaya\ZabbixSender\Connection;
 
 use RuntimeException;
+use Webmasterskaya\ZabbixSender\Resolver\OptionsResolver;
 
-use function sprintf;
+use function is_resource;
 use function strlen;
 
 /**
@@ -26,7 +27,7 @@ final class UnencryptedConnection implements ConnectionInterface
 
 	public function __construct(array $options = [])
 	{
-		$this->options = $options;
+		$this->options = OptionsResolver::resolve($options);
 	}
 
 	/**
@@ -34,33 +35,35 @@ final class UnencryptedConnection implements ConnectionInterface
 	 */
 	public function write(string $data): false|int
 	{
-		if (!$this->socket) {
-			$this->open();
+		if ($this->socket === null) {
+			return false;
 		}
 
-		$total_written = 0;
-		$length        = strlen($data);
-		while ($total_written < $length) {
+		$bytesWritten = 0;
+		$length = strlen($data);
+		while ($bytesWritten < $length) {
 			$written = @fwrite($this->socket, $data);
 			if ($written === false) {
 				return false;
 			}
 
 
-			$total_written += $written;
-			$data          = substr($data, $written);
-
+			$bytesWritten += $written;
+			$data = substr($data, $written);
 		}
 
-		return $total_written;
+		return $bytesWritten;
 	}
-
 
 	/**
 	 * @inheritDoc
 	 */
 	public function open(): void
 	{
+		if ($this->socket !== null) {
+			throw new RuntimeException('Connection is already open.');
+		}
+
 		$this->socket = @fsockopen(
 			$this->options['server'],
 			$this->options['port'],
@@ -69,19 +72,21 @@ final class UnencryptedConnection implements ConnectionInterface
 			5
 		);
 
-		if (!$this->socket) {
-			throw new RuntimeException(sprintf('%s: %s', $error_code, $error_message));
+		if (!is_resource($this->socket)) {
+			$message = !empty($errorMessage)
+				? "Failed to open connection. Error: $errorMessage"
+				: 'Failed to open connection.';
+			throw new RuntimeException($message);
 		}
 	}
-
 
 	/**
 	 * @inheritDoc
 	 */
 	public function read(): false|string
 	{
-		if (!$this->socket) {
-			$this->open();
+		if ($this->socket === null) {
+			return false;
 		}
 
 		$data = "";
@@ -93,17 +98,19 @@ final class UnencryptedConnection implements ConnectionInterface
 			$data .= $buffer;
 		}
 
-		return $data;
+		return $data ?: false;
 	}
-
 
 	/**
 	 * @inheritDoc
 	 */
 	public function close(): void
 	{
-		if ($this->socket) {
-			fclose($this->socket);
+		if ($this->socket === null) {
+			return;
 		}
+
+		fclose($this->socket);
+		$this->socket = null;
 	}
 }

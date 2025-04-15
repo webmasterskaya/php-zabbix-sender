@@ -2,6 +2,12 @@
 
 namespace Webmasterskaya\ZabbixSender\Connection;
 
+use RuntimeException;
+use Webmasterskaya\ZabbixSender\Resolver\OptionsResolver;
+
+use function is_resource;
+use function sprintf;
+
 /**
  * Implements PKS connections from host.
  *
@@ -16,32 +22,29 @@ final class PskConnection implements ConnectionInterface
 
 	private array $pipes = [];
 
-	/**
-	 * @var array Connection options
-	 */
-	private array $options;
+	private string $command;
+
 
 	public function __construct(array $options)
 	{
-		if (!function_exists('proc_open')) {
-			throw new \RuntimeException('ProcOpen function is not available');
-		}
+		$options = OptionsResolver::resolve($options);
 
-		$this->options = $options;
+		$this->command = sprintf(
+			'openssl s_client -connect %s:%d -psk_identity %s -psk %s',
+			escapeshellarg($options['server']),
+			(int)$options['port'],
+			escapeshellarg($options['tls-psk-identity']),
+			escapeshellarg($options['tls-psk'])
+		);
 	}
 
-	public function open()
+	/**
+	 * @inheritDoc
+	 */
+	public function open(): void
 	{
-		$command = sprintf(
-			'openssl s_client -connect %s:%d -psk_identity %s -psk %s',
-			escapeshellarg($this->options['server']),
-			(int)$this->options['port'],
-			escapeshellarg($this->options['tls-psk-identity']),
-			escapeshellarg($this->options['tls-psk'])
-		);
-
 		if ($this->process !== null) {
-			throw new \RuntimeException('Connection is already open.');
+			throw new RuntimeException('Connection is already open.');
 		}
 
 		$descriptors = [
@@ -50,14 +53,17 @@ final class PskConnection implements ConnectionInterface
 			2 => ['pipe', 'w'], // stderr
 		];
 
-		$this->process = proc_open($command, $descriptors, $this->pipes);
+		$this->process = proc_open($this->command, $descriptors, $this->pipes);
 
 		if (!is_resource($this->process)) {
-			throw new \RuntimeException('Failed to open connection.');
+			throw new RuntimeException('Failed to open connection.');
 		}
 	}
 
-	public function read(): string
+	/**
+	 * @inheritDoc
+	 */
+	public function read(): false|string
 	{
 		if ($this->process === null || !isset($this->pipes[1])) {
 			return false;
@@ -67,6 +73,9 @@ final class PskConnection implements ConnectionInterface
 		return $output ?: false;
 	}
 
+	/**
+	 * @inheritDoc
+	 */
 	public function write(string $data): false|int
 	{
 		if ($this->process === null || !isset($this->pipes[0])) {
@@ -78,7 +87,10 @@ final class PskConnection implements ConnectionInterface
 		return $bytesWritten ?: false;
 	}
 
-	public function close()
+	/**
+	 * @inheritDoc
+	 */
+	public function close(): void
 	{
 		if ($this->process === null) {
 			return;
